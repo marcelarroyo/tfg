@@ -4,6 +4,7 @@
 import cv2
 import numpy as np
 from keras.models import load_model
+from keras.datasets import mnist
 import Levenshtein
 from keras.models import model_from_json
 import sys
@@ -85,8 +86,8 @@ def main():
     #loaded_model_json = json_file.read()
     #modelMNIST = model_from_json(loaded_model_json)
     #modelMNIST.load_weights("modelMarcel.h5")
-    modelMNIST = load_model("./checkpoint_mnist.h5")
-    modelNIST = load_model("./checkpoint_nonums.h5")
+    modelMNIST = load_model("./model_nums_hard.h5")
+    modelNIST = load_model("./model_nums_hard.h5")
     models = (modelNIST, modelMNIST)
     modelMNIST.summary()
     modelNIST.summary()
@@ -363,62 +364,12 @@ def processFile(filename, possibleWords, models):
     #cv2.waitKey(10000)
     #cv2.destroyAllWindows()
     #Tractar de trobar els contorns de la taula
-    '''
-    _, contours, hierarchy = cv2.findContours(table, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    rois = []
-    print(contours)
-    for element in contours:
-        area = cv2.contourArea(element)
-        print(area)
-        if (area > 55):
-            contour_poly = cv2.approxPolyDP(element, 3, True)
-            print(contour_poly)
-            boundRect = cv2.boundingRect(contour_poly)
-            print(boundRect)
-            roi = vertexs[boundRect]
-            joints_contour = cv2.findContours(roi, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
-            if (joints_contour.size() > 4):
-                rsz = cp.deepcopy(rsz[boundRect])
-                rois.append(rsz)
-    '''
-    surnameX1 = 0
-    surnameY1 = 0
-    dniX1 = 0
-    dniY1 = 0
-    nameX2 = 0
-    nameY2 = 0
-    surnameX2 = 0
-    surnameY2 = 0
-    dniX2 = 0
-    dniY2 = 0
-    surnameX3 = 0
-    surnameY3 = 0
-    dniX3 = 0
-    dniY3 = 0
-    nameX3 = 0
-    nameY3 = 0
-    surnameX4 = 0
-    surnameY4 = 0
-    dniX4 = 0
-    dniY4 = 0
-    nameX4 = 0
-    nameY4 = 0
     trobat = 0
-    rectYo = 0
-    rectYf = 0
-    rectXo = 0
-    rectXf = 0
     i = 0
     while (i < rowsV and (not trobat)):
         j = 0
         while (j < colsV and (not trobat)):
             if (vertexs[i][j] >= 5):
-                #surnameX1 = j
-                #surnameY1 = i
-                #surnameY2 = i
-                #surnameX3 = j
-                #nameX1 = j
-                #nameX3 = j
                 rectYo = i
                 trobat = 1
             j += 1
@@ -431,10 +382,6 @@ def processFile(filename, possibleWords, models):
         j = 0
         while (j < colsV and (not trobat)):
             if (vertexs[i][j] >= 5):
-                #surnameX2 = j
-                #surnameX4 = j
-                #dniX2 = j
-                #dniX4 = j
                 rectYf = i
                 trobat = 1
             j += 1
@@ -448,8 +395,6 @@ def processFile(filename, possibleWords, models):
         while (j < rowsV and (not trobat)):
             #print("point ", j, " ",i, " :", vertexs[j][i])
             if (vertexs[j][i] >= 5):
-                #surnameY3 = i
-                #surnameY4 = i
                 rectXo = i
                 trobat = 1
             j += 1
@@ -462,8 +407,6 @@ def processFile(filename, possibleWords, models):
         j = 0
         while (j < rowsV and (not trobat)):
             if (vertexs[j][i] >= 5):
-                #surnameY3 = i
-                #surnameY4 = i
                 rectXf = i
                 trobat = 1
             j += 1
@@ -474,10 +417,234 @@ def processFile(filename, possibleWords, models):
     print "Second point surname: ",rectXf
     print "Third point surname: ",rectYo
     print "Fourth point surname: ",rectYf
-    surname = cutImage(imgBitwise, rectYo,rectYf,rectXo,rectXf)
+    contourTable = cutImage(imgBitwise, rectYo,rectYf,rectXo,rectXf)
+    cv2.imshow("Contour Table", contourTable)
+    cv2.waitKey(10000)
+    cv2.destroyAllWindows()
+    #Separar les els diferents camps de la taula
+    rows = contourTable.shape[0]
+    cols = contourTable.shape[1]
+    surname = cp.deepcopy(cutImage(contourTable, 0, 60, 0, cols - 1))
     cv2.imshow("Surname Table", surname)
     cv2.waitKey(10000)
     cv2.destroyAllWindows()
+    name = cp.deepcopy(cutImage(contourTable, rows-61, rows-1, 0, 666))
+    cv2.imshow("Name Table", name)
+    cv2.waitKey(10000)
+    cv2.destroyAllWindows()
+    dni = cp.deepcopy(cutImage(contourTable, rows-61, rows-1, 752, cols - 1))
+    cv2.imshow("DNI Table", dni)
+    cv2.waitKey(10000)
+    cv2.destroyAllWindows()
+    #Separar cada caracter en una imatge
+    dni_images = []
+    name_images = []
+    surname_images = []
+    dni_image_size = 44
+    name_image_size = 44
+    surname_image_size = 44
+    print("DNI size: ", dni_image_size)
+    print("name size: ", name_image_size)
+    print("surname size: ", surname_image_size)
+    i = 0
+    while (i < 26):
+        if (i < 9):
+            dni_images.append(cp.deepcopy(cutImage(dni,0,dni.shape[0]-1,i*44, i*44 + 45)))
+            #cv2.imshow("DNI Images", dni_images[i])
+            #cv2.waitKey(10000)
+            #cv2.destroyAllWindows()
+        if (i < 15):
+            name_images.append(cp.deepcopy(cutImage(name,0,name.shape[0]-1,i*44, i*44 + 45)))
+            #cv2.imshow("Name Images", name_images[i])
+            #cv2.waitKey(10000)
+            #cv2.destroyAllWindows()
+        if (i < 26):
+            surname_images.append(cp.deepcopy(cutImage(surname,0,surname.shape[0]-1,i*44, i*44 + 45)))
+            #cv2.imshow("Surname Images", surname_images[i])
+            #cv2.waitKey(10000)
+            #cv2.destroyAllWindows()
+        i += 1
+    i = 0
+    prediction_dni = []
+    dni_images_28_28 = []
+    while(i < 8):
+        #Modifiquem la imatge a 28x28
+        
+        colsAux = dni_images[i].shape[1]
+        rowsAux = dni_images[i].shape[0]
+        #Selecionem els marges a retallar
+        top = int(round(0.15*rowsAux))
+        bottom = int(round(0.10*rowsAux))
+        left = int(round(0.10*colsAux))
+        right = int(round(0.10*colsAux))
+
+        #Pintar de negre la part amb ratlles superior
+        j = 0
+        while (j < top):
+            k = 0
+            while (k < colsAux):
+                dni_images[i][j][k] = 0
+                k += 1
+            j += 1
+        #Pintar de negre la part amb ratlles esquerre
+        j = 0
+        while (j < rowsAux):
+            k = 0
+            while (k < left):
+                dni_images[i][j][k] = 0
+                k += 1
+            j += 1
+        #Pintar de negre la part amb ratlles inferior
+        j = rowsAux - bottom
+        while (j < rowsAux):
+            k = 0
+            while (k < colsAux):
+                dni_images[i][j][k] = 0
+                k += 1
+            j += 1
+        #Pintar de negre la part amb ratlles dreta
+        j = 0
+        while (j < rowsAux):
+            k = colsAux - (right + 1)
+            while(k < colsAux):
+                dni_images[i][j][k] = 0
+                k += 1
+            j += 1
+
+
+
+        #aux1 = dni_images[i][0+top:rowsAux-bottom, 0+left:colsAux-right]
+
+        cv2.imshow("Number DNI Cropped", dni_images[i])
+        cv2.waitKey(10000)
+        cv2.destroyAllWindows()
+        '''
+        #Normalitzar la imatge
+        x = 0
+        while (x < aux1.shape[0]):
+            y = 0
+            while(y < aux1.shape[1]):
+                if (aux1[x][y] > 30):
+                    aux1[x][y] = 0
+                else: 
+                    aux1[x][y] =  255
+                y += 1
+            x += 1
+        cv2.imshow("Number DNI  Maximize", aux1)
+        cv2.waitKey(10000)
+        cv2.destroyAllWindows()
+
+        '''
+
+        #Resize equitatiu sense deformacions (afegir pixels negres per fer la imatge 59*59)
+        diferenceDimensions = rowsAux - colsAux
+        if (diferenceDimensions%2 == 1):
+            pixelsLeft = int(round(diferenceDimensions/2)) + 1
+            pixelsRight = int(round(diferenceDimensions/2))
+        else:
+            pixelsLeft = diferenceDimensions/2
+            pixelsRight = diferenceDimensions/2
+        print ("columnes sumades: ", pixelsLeft + colsAux + pixelsRight)
+        print ("Files: ", rowsAux)
+        #Crear una image de 59*59
+        aux59x59 = cv2.resize(dni_images[i], (rowsAux, pixelsLeft + colsAux + pixelsRight), cv2.INTER_LINEAR)
+        #Afegir el marges negres a la imatge original
+        whiteColor = 0
+        j = 0 
+        while (j < rowsAux):
+            k = 0
+            while (k < pixelsLeft):
+                aux59x59[j][k] = 0
+                k += 1
+            j += 1
+        j = 0
+        while (j < rowsAux):
+            k = 0
+            while (k < colsAux):
+                aux59x59[j][k + pixelsLeft] = dni_images[i][j][k]
+                if (dni_images[i][j][k] > whiteColor):
+                    whiteColor = dni_images[i][j][k]
+                k += 1
+            j += 1
+        j = 0
+        while (j < rowsAux):
+            k = colsAux + pixelsLeft
+            while (k < colsAux + pixelsRight):
+                aux59x59[j][k] = 0
+                k += 1
+            j += 1
+
+        #Correccio de color
+        j = 0
+        while (j < aux59x59.shape[0]):
+            k = 0
+            while (k < aux59x59.shape[1]):
+                aux59x59[j][k] = (aux59x59[j][k] * 255) / whiteColor
+                if (aux59x59[j][k] >= 90):
+                    aux59x59[j][k] = 255
+                else:
+                    aux59x59[j][k] = 0 
+                k += 1
+            j += 1
+
+        cv2.imshow("Number DNI Corecction Color", aux59x59)
+        cv2.waitKey(10000)
+        cv2.destroyAllWindows()
+        #Resize image
+        aux = cv2.resize(aux59x59, (28, 28), cv2.INTER_LINEAR)
+        #colsAux = aux.shape[1]
+        #rowsAux = aux.shape[0]
+        cv2.imshow("Number DNI Maximized & Cropped", aux)
+        cv2.waitKey(10000)
+        cv2.destroyAllWindows()
+
+
+        '''
+        x = 0
+        while (x < 28):
+            y = 0
+            while(y < 28):
+                if (aux[x][y] > 30):
+                    aux[x][y] = 0
+                else:
+                    aux[x][y] = 1
+                y += 1
+            x += 1
+        cv2.imshow("Number DNI Reescaled & Cropped & Normalize", aux)
+        cv2.waitKey(10000)
+        cv2.destroyAllWindows()
+        '''
+        #Apliquem marges negres per eliminar les ralles de la taula
+        '''
+        horizontalStructureAux = cv2.getStructuringElement(cv2.MORPH_RECT, (28,1));
+        source_eroded_aux = cv2.erode(aux, horizontalStructureAux, iterations=1);
+        source_dilated_aux = cv2.dilate(source_eroded_aux,horizontalStructureAux, iterations=1);
+        cv2.imshow("horizontal_aux", source_dilated_aux)
+        cv2.waitKey(10000)
+        cv2.destroyAllWindows()
+
+        '''
+
+
+        '''
+        top = int(round(0.05*rowsAux))
+        bottom = int(round(0.05*rowsAux))
+        left = int(round(0.10*colsAux))
+        right = int(round(0.10*colsAux))
+        borderImage = cv2.copyMakeBorder(aux, top, bottom, left, right,cv2.BORDER_CONSTANT ,0)
+        cv2.imshow("Number DNI Reescaled & Border", borderImage)
+        cv2.waitKey(10000)
+        cv2.destroyAllWindows()
+        '''
+        #Normalitzem la imatge
+
+        #Convertim l'estructura en la estructura per defecte d'entrada
+        res = aux.reshape(1,1, 28, 28).astype('float32')
+        res = res/255
+        #Predim el caracter
+        prediction_dni.append(models[1].predict(res))
+        print(prediction_dni[i])
+        i += 1
     '''
 
     edges = cv2.Canny(imgBitwise,50,120)

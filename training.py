@@ -12,10 +12,12 @@ from keras.layers.convolutional import MaxPooling2D
 from keras.utils import np_utils
 from keras.models import load_model
 from keras import backend as K
+import cv2
+
 K.set_image_dim_ordering('th')
 
 # fix random seed for reproducibility
-seed = 7
+seed = 20
 numpy.random.seed(seed)
 
 '''
@@ -39,7 +41,6 @@ X_test = X_test.reshape(X_test.shape[0], 1, 28, 28).astype('float32')
 # Normalitzar les entrades de 0-255 a 0-1
 X_train = X_train / 255
 X_test = X_test / 255
-
 # One hot encode outputs -> Transformar les sortides a format [samples][0 to 9 booleans]
 y_train = np_utils.to_categorical(y_train)
 y_test = np_utils.to_categorical(y_test)
@@ -85,8 +86,8 @@ def main():
 		model = load_existing_model(modelName)
 	# Entrenament del model
 	modelToSave = "./" + modelName + ".h5"
-	#callback = keras.callbacks.ModelCheckpoint(modelToSave, monitor='val_loss', verbose=1, save_best_only=True,  mode='auto')
-	#model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=10, batch_size=200, callbacks=[callback])
+	callback = keras.callbacks.ModelCheckpoint(modelToSave, monitor='val_loss', verbose=1, save_best_only=True,  mode='auto')
+	model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=10, batch_size=200, callbacks=[callback])
 	# Avaluacio del model
 	prediction = model.predict(X_test)
 	i = 0
