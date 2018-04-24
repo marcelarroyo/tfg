@@ -15,15 +15,6 @@ import copy as cp
 import time
 
 
-totalChecks=0
-totalHits=0
-totalFails=0
-checks=[0,0,0,0,0,0,0,0,0,0]
-hits=[0,0,0,0,0,0,0,0,0,0]
-fails=[0,0,0,0,0,0,0,0,0,0]
-
-
-
 #Input: Directori on buscar el csv i els arxius jpg. /test/test
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -103,12 +94,15 @@ def parseArgs(argList, prefix):
     return (images, nameList)
 
 def main():
-    #json_file = open('model.json','r')
-    #loaded_model_json = json_file.read()
-    #modelMNIST = model_from_json(loaded_model_json)
-    #modelMNIST.load_weights("modelMarcel.h5")
-    modelMNIST = load_model("./AgustiMarcelModel.h5")
-    modelNIST = load_model("./AgustiMarcelModel.h5")
+
+    totalChecks=0
+    totalHits=0
+    checks=[0,0,0,0,0,0,0,0,0,0]
+    hits=[0,0,0,0,0,0,0,0,0,0]
+
+
+    modelMNIST = load_model("./modelAgusti28x28.h5")
+    modelNIST = load_model("./modelAgusti28x28.h5")
     models = (modelNIST, modelMNIST)
     modelMNIST.summary()
     modelNIST.summary()
@@ -126,16 +120,26 @@ def main():
         print (str(image))
         time.sleep(3)
         #fileResult, errorRates = processFile(image, names[1], models)
-        processFile(image, names[0], names[1], models)
+        totalChecksAux, totalHitsAux,checksAux, hitsAux = processFile(image, names[0], names[1], models)
+        totalChecks += totalChecksAux
+        totalHits += totalHitsAux
+        checks=np.add(checksAux,checks)
+        hits=np.add(hitsAux,hits)
+        print totalHits
+        print totalChecks
         #results.append(fileResult)
         #errors.append(errorRates)
     #Mostra el % d'encerts total
-    print totalHits/totalChecks
+    print totalHits
+    print totalChecks
+    totalPercentatge = totalHits/float(totalChecks)
+    print totalPercentatge
 
     #Mostra el percentatge d'encerts per a cada numero
     i = 0
     while (i < 10):
-        print "Percentat d'encert sobre el nombre ",i," : ", hits[i]/checks[i]
+        numberPercentatge = hits[i]/float(checks[i])
+        print "Percentat d'encert sobre el nombre ",i," : ", numberPercentatge
         i += 1
 '''
     result,unused, unrecognizable = mapResults(results, names[0], images, errors)
@@ -329,10 +333,11 @@ def cutImage(image, minHeight, maxHeight, minWide, maxWide):
     return image[minHeight:maxHeight, minWide:maxWide]
 
 def processFile(filename, data ,possibleWords, models):
-    global totalChecks
-    global totalHits
-    global hits
-    global checks
+    totalChecks=0
+    totalHits=0
+    checks=[0,0,0,0,0,0,0,0,0,0]
+    hits=[0,0,0,0,0,0,0,0,0,0]
+
     print filename
     nameNoPath = os.path.basename(filename)
     print nameNoPath
@@ -622,7 +627,7 @@ def processFile(filename, data ,possibleWords, models):
                 k = 0
                 while (k < aux59x59.shape[1]):
                     aux59x59[j][k] = (aux59x59[j][k] * 255) / whiteColor
-                    if (aux59x59[j][k] < 90):
+                    if (aux59x59[j][k] < 45):
                         aux59x59[j][k] = 0
                     else: 
                         aux59x59[j][k] = 255
@@ -641,9 +646,9 @@ def processFile(filename, data ,possibleWords, models):
             #aux = cv2.resize(aux,None,fx=2,fy=2, cv2.INTER_LINEAR)
             #colsAux = aux.shape[1]
             #rowsAux = aux.shape[0]
-            #cv2.imshow("Number DNI Maximized & Cropped", aux2)
-            #cv2.waitKey(10000)
-            #cv2.destroyAllWindows()
+            cv2.imshow("Number DNI Maximized & Cropped", aux2)
+            cv2.waitKey(1000)
+            cv2.destroyAllWindows()
 
 
             '''
@@ -740,7 +745,7 @@ def processFile(filename, data ,possibleWords, models):
             #prediction_dni.append(models[1].predict(arr)[0])
             prediction_dni.append(models[1].predict(res))
             i += 1
-
+    return totalChecks, totalHits, checks, hits
     '''
 
     edges = cv2.Canny(imgBitwise,50,120)
