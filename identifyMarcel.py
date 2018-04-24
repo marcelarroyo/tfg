@@ -99,7 +99,7 @@ def main():
     totalHits=0
     checks=[0,0,0,0,0,0,0,0,0,0]
     hits=[0,0,0,0,0,0,0,0,0,0]
-
+    fullHit = 0
 
     modelMNIST = load_model("./modelAgusti28x28.h5")
     modelNIST = load_model("./modelAgusti28x28.h5")
@@ -120,11 +120,12 @@ def main():
         print (str(image))
         time.sleep(3)
         #fileResult, errorRates = processFile(image, names[1], models)
-        totalChecksAux, totalHitsAux,checksAux, hitsAux = processFile(image, names[0], names[1], models)
+        totalChecksAux, totalHitsAux,checksAux, hitsAux, fullHitAux = processFile(image, names[0], names[1], models)
         totalChecks += totalChecksAux
         totalHits += totalHitsAux
         checks=np.add(checksAux,checks)
         hits=np.add(hitsAux,hits)
+        fullHit += fullHitAux
         print totalHits
         print totalChecks
         #results.append(fileResult)
@@ -134,7 +135,7 @@ def main():
     print totalChecks
     totalPercentatge = totalHits/float(totalChecks)
     print totalPercentatge
-
+    print fullHit
     #Mostra el percentatge d'encerts per a cada numero
     i = 0
     while (i < 10):
@@ -337,7 +338,7 @@ def processFile(filename, data ,possibleWords, models):
     totalHits=0
     checks=[0,0,0,0,0,0,0,0,0,0]
     hits=[0,0,0,0,0,0,0,0,0,0]
-
+    fullHit = 0
     print filename
     nameNoPath = os.path.basename(filename)
     print nameNoPath
@@ -646,9 +647,9 @@ def processFile(filename, data ,possibleWords, models):
             #aux = cv2.resize(aux,None,fx=2,fy=2, cv2.INTER_LINEAR)
             #colsAux = aux.shape[1]
             #rowsAux = aux.shape[0]
-            cv2.imshow("Number DNI Maximized & Cropped", aux2)
-            cv2.waitKey(1000)
-            cv2.destroyAllWindows()
+            #cv2.imshow("Number DNI Maximized & Cropped", aux2)
+            #cv2.waitKey(1000)
+            #cv2.destroyAllWindows()
 
 
             '''
@@ -745,7 +746,12 @@ def processFile(filename, data ,possibleWords, models):
             #prediction_dni.append(models[1].predict(arr)[0])
             prediction_dni.append(models[1].predict(res))
             i += 1
-    return totalChecks, totalHits, checks, hits
+
+        if totalHits == 8:
+            fullHit = 1
+        else:
+            fullHit = 0
+    return totalChecks, totalHits, checks, hits, fullHit
     '''
 
     edges = cv2.Canny(imgBitwise,50,120)
