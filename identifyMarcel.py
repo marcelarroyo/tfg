@@ -670,9 +670,9 @@ def processFile(filename, data ,possibleWords, models):
             #aux = cv2.resize(aux,None,fx=2,fy=2, cv2.INTER_LINEAR)
             #colsAux = aux.shape[1]
             #rowsAux = aux.shape[0]
-            cv2.imshow("Number DNI Maximized & Cropped", aux2)
-            cv2.waitKey(1000)
-            cv2.destroyAllWindows()
+            #cv2.imshow("Number DNI Maximized & Cropped", aux2)
+            #cv2.waitKey(1000)
+            #cv2.destroyAllWindows()
 
 
             '''
