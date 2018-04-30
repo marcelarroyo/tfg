@@ -163,12 +163,18 @@ X_test/=255
 
 #batches = idg.flow_from_directory(join(path, "train"), target_size=(64,64), color_mode="grayscale")
 #val_batches = idg.flow_from_directory(join(path, "val"), target_size=(64,64), color_mode="grayscale")
-
+print y_train
 number_of_classes = 10
-
+print y_train.shape
+print y_test.shape
 Y_train = np_utils.to_categorical(y_train, number_of_classes)
 Y_test = np_utils.to_categorical(y_test, number_of_classes)
-gen = ImageDataGenerator(rotation_range=8, width_shift_range=0.08, shear_range=0.3, height_shift_range=0.08, zoom_range=0.08)
+print Y_train.shape
+print Y_test.shape
+#gen = ImageDataGenerator(rotation_range=8, width_shift_range=0.08, shear_range=0.3, height_shift_range=0.08, zoom_range=0.08)
+#gen =  ImageDataGenerator( zoom_range=0.3, width_shift_range=0.2, height_shift_range=0.2)
+#gen = ImageDataGenerator()
+gen = ImageDataGenerator(rotation_range=8, width_shift_range=0.15, shear_range=0.3, height_shift_range=0.15, zoom_range=0.15)
 
 test_gen = ImageDataGenerator()
 train_generator = gen.flow(X_train, Y_train, batch_size=64)
@@ -300,7 +306,7 @@ def creation_model():
 
 #Carrega d'un model ja existent
 def load_existing_model(modelName):
-	model = load_model("./model_nums_hard.h5")
+	model = load_model("./modelAgusti28x28.h5")
 	return model
 
 

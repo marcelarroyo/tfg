@@ -100,12 +100,16 @@ def main():
     checks=[0,0,0,0,0,0,0,0,0,0]
     hits=[0,0,0,0,0,0,0,0,0,0]
     fullHit = 0
+    totalChecksDNILetter=0
+    totalHitsDNILetter=0
+    checksDNILetter=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+    hitsDNILetter=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 
     modelMNIST = load_model("./modelAgusti28x28.h5")
-    modelNIST = load_model("./modelAgusti28x28.h5")
-    models = (modelNIST, modelMNIST)
+    modelEMNIST = load_model("./model_emnist_28x28.h5")
+    models = (modelMNIST, modelEMNIST)
     modelMNIST.summary()
-    modelNIST.summary()
+    modelEMNIST.summary()
 
     images, nameList = parseArgs(sys.argv, "")
     names = parseNameList(nameList)
@@ -120,29 +124,44 @@ def main():
         print (str(image))
         time.sleep(3)
         #fileResult, errorRates = processFile(image, names[1], models)
-        totalChecksAux, totalHitsAux,checksAux, hitsAux, fullHitAux = processFile(image, names[0], names[1], models)
+        totalChecksAux, totalHitsAux,checksAux, hitsAux, fullHitAux, totalChecksDNILetterAux, totalHitsDNILetterAux, checksDNILetterAux, hitsDNILetterAux = processFile(image, names[0], names[1], models)
         totalChecks += totalChecksAux
         totalHits += totalHitsAux
         checks=np.add(checksAux,checks)
         hits=np.add(hitsAux,hits)
         fullHit += fullHitAux
+        totalChecksDNILetter += totalChecksDNILetterAux
+        totalHitsDNILetter += totalHitsDNILetterAux
+        checksDNILetter=np.add(checksDNILetter,checksDNILetterAux)
+        hitsDNILetter=np.add(hitsDNILetter,hitsDNILetterAux)
         print totalHits
         print totalChecks
         #results.append(fileResult)
         #errors.append(errorRates)
     #Mostra el % d'encerts total
-    print totalHits
-    print totalChecks
+    print "HITS DNI (NUM): ",totalHits
+    print "CHECKS DNI (NUM): ",totalChecks
     totalPercentatge = totalHits/float(totalChecks)
-    print totalPercentatge
-    print fullHit
+    print "PERCENTATGE ENCERTS DNI (NUM): ", totalPercentatge
+    print "ENCERTS DNI COMPLERTS (NUM): ", fullHit
     #Mostra el percentatge d'encerts per a cada numero
     i = 0
     while (i < 10):
         numberPercentatge = hits[i]/float(checks[i])
         print "Percentat d'encert sobre el nombre ",i," : ", numberPercentatge
         i += 1
-'''
+    #Mostra el % d'encerts total lletra dni
+    print "HITS DNI (LLETRA): ",totalHitsDNILetter
+    print "CHECKS DNI (LLETRA): ",totalChecksDNILetter
+    totalPercentatgeDNILetter = totalHitsDNILetter/float(totalChecksDNILetter)
+    print "PERCENTATGE ENCERTS DNI (LLETRA): ", totalPercentatgeDNILetter
+    #Mostra el percentatge d'encerts per a cada lletra
+    i = 0
+    while (i < 26):
+        numberPercentatge = hitsDNILetter[i]/float(checksDNILetter[i])
+        print "Percentat d'encert sobre la lletra ",str(unichr(i + 65))," : ", numberPercentatge
+        i += 1
+    '''
     result,unused, unrecognizable = mapResults(results, names[0], images, errors)
     fin = {
         "identified" : result, 
@@ -339,6 +358,10 @@ def processFile(filename, data ,possibleWords, models):
     checks=[0,0,0,0,0,0,0,0,0,0]
     hits=[0,0,0,0,0,0,0,0,0,0]
     fullHit = 0
+    totalChecksDNILetter=0
+    totalHitsDNILetter=0
+    checksDNILetter=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+    hitsDNILetter=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
     print filename
     nameNoPath = os.path.basename(filename)
     print nameNoPath
@@ -515,7 +538,7 @@ def processFile(filename, data ,possibleWords, models):
         i = 0
         prediction_dni = []
         dni_images_28_28 = []
-        while(i < 8):
+        while(i < 9):
             #Modifiquem la imatge a 28x28
             
             colsAux = dni_images[i].shape[1]
@@ -647,9 +670,9 @@ def processFile(filename, data ,possibleWords, models):
             #aux = cv2.resize(aux,None,fx=2,fy=2, cv2.INTER_LINEAR)
             #colsAux = aux.shape[1]
             #rowsAux = aux.shape[0]
-            #cv2.imshow("Number DNI Maximized & Cropped", aux2)
-            #cv2.waitKey(1000)
-            #cv2.destroyAllWindows()
+            cv2.imshow("Number DNI Maximized & Cropped", aux2)
+            cv2.waitKey(1000)
+            cv2.destroyAllWindows()
 
 
             '''
@@ -729,29 +752,46 @@ def processFile(filename, data ,possibleWords, models):
             #Predim el caracter
             aux2= aux2/255
             res= aux2.reshape(1,28,28,1)
-            print models[1].predict(res)
-            predictionNumber = np.argmax(models[1].predict(res))
-            print "Resultat de la prediccio: ", predictionNumber
-            print "Numero real mostrat: ", data[indexImage][8][i]
-            #Comprovar si es el nombre correcte
-            if (data[indexImage][8][i] != '*' and ord(data[indexImage][8][i]) >= 48 and ord(data[indexImage][8][i]) <= 57):
-                totalChecks +=1
-                checks[int(data[indexImage][8][i])] +=1
-                if (int(data[indexImage][8][i]) == predictionNumber):
-                    hits[int(data[indexImage][8][i])] +=1
-                    totalHits +=1
+            if (i != 8):
+                print models[0].predict(res)
+                predictionNumber = np.argmax(models[0].predict(res))
+                print "Resultat de la prediccio: ", predictionNumber
+                print "Numero real mostrat: ", data[indexImage][8][i]
+                #Comprovar si es el nombre correcte
+                if (data[indexImage][8][i] != '*' and ord(data[indexImage][8][i]) >= 48 and ord(data[indexImage][8][i]) <= 57):
+                    totalChecks +=1
+                    checks[int(data[indexImage][8][i])] +=1
+                    if (int(data[indexImage][8][i]) == predictionNumber):
+                        hits[int(data[indexImage][8][i])] +=1
+                        totalHits +=1
 
-            print "prediccions realitxzades fins el momment: ", totalChecks
-            print "Encerts fins el moment: ", totalHits
-            #prediction_dni.append(models[1].predict(arr)[0])
-            prediction_dni.append(models[1].predict(res))
+                print "prediccions realitxzades fins el momment: ", totalChecks
+                print "Encerts fins el moment: ", totalHits
+                #prediction_dni.append(models[1].predict(arr)[0])
+                prediction_dni.append(models[0].predict(res))
+            else:
+                print models[1].predict(res)
+                predictionLetter = np.argmax(models[1].predict(res))
+                print "Resultat de la prediccio: ", predictionLetter
+                print "Numero real mostrat: ", data[indexImage][9][i]
+                #Comprovar si es el nombre correcte
+                if (data[indexImage][9][i] != '*' and ((ord(data[indexImage][9][i]) >= 65 and ord(data[indexImage][9][i]) <= 90) or (ord(data[indexImage][9][i]) >= 97 and ord(data[indexImage][9][i]) <= 122))):
+                    totalChecksDNILetter +=1
+                    checksDNILetter[ord(data[indexImage][9][i])-65] +=1
+                    if ((ord(data[indexImage][9][i])-65) == predictionLetter):
+                        hitsDNILetter[ord(data[indexImage][9][i])-65] +=1
+                        totalHitsDNILetter +=1
+
+                print "prediccions realitxzades fins el momment: ", totalChecksDNILetter
+                print "Encerts fins el moment: ", totalHitsDNILetter
+                #prediction_dni.append(models[1].predict(arr)[0])
+                prediction_dni.append(models[1].predict(res))
             i += 1
-
         if totalHits == 8:
             fullHit = 1
         else:
             fullHit = 0
-    return totalChecks, totalHits, checks, hits, fullHit
+    return totalChecks, totalHits, checks, hits, fullHit, totalChecksDNILetter, totalHitsDNILetter, checksDNILetter, hitsDNILetter
     '''
 
     edges = cv2.Canny(imgBitwise,50,120)
