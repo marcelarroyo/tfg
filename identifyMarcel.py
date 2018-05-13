@@ -35,7 +35,7 @@ class Exam:
         self.realSurname = ""
         self.realFileName = realFileName
         self.realCsvIndex = -1
-
+        self.possibleCsvIndex = []
 def remove_diacritic(input):
     '''
     Accept a unicode string, and return a normal string (bytes in Python 3)
@@ -90,7 +90,7 @@ def parseNameList(namefile):
             exam.append(surname)
             exam.append(ascii_name)
             exam.append(ascii_surname)
-            exam.append(idx)
+            exam.append(idx+1)
             exam.append(realName)
             exam.append(realSurname)
             exam.append(realDNI)
@@ -143,11 +143,14 @@ def showExam(exam):
 def basicAssignment(exams,csvData):
     contador = 0
     elements = 0
+    #Recorrer tots els examens
     for exam in exams:
         numDNIString = ''.join(str(e) for e in exam.numberDNI)
+        #Calculem la lletra del DNI amb els valors numerics predits
         resultLetterDNI = DNILetter(int(numDNIString))
         print "Lletra calculada amb el numeros predits del DNI: ", resultLetterDNI
         print "Lletra predida del DNI: ", exam.letterDNI
+        #Si la lletra calculada correspon amb la lletra predida assignacio directa si la trobem al llistat
         if (resultLetterDNI == exam.letterDNI):
             print "MATCH!!!!!!!!"
             contador += 1
@@ -172,30 +175,148 @@ def basicAssignment(exams,csvData):
     return exams, csvData
 
 def oneErrorAssignment (exams, csvData):
+    examsWithMoreThanOneCandidate = 0
+    #recorrem tots els examens
     for exam in exams:
         if (exam.realCsvIndex == -1):
             i = 0
-            trobat = 0
-            while (i < len(csvData) and not trobat):
+            #trobat = 0
+            #recorrem tot el llistat csv en busca de alumnes no assignats
+            possibleCandidates = []
+            while (i < len(csvData)):
                 if (csvData[i][10] == 0):
                     j = 0
                     numDNIString = ''.join(str(e) for e in exam.numberDNI)
                     fullDNI = numDNIString + exam.letterDNI
-                    onlyOneError = 0
                     errors = 0
+                    #Busquem en el llistat tots els dnis que difereixen amb el dni predit en 1 unitat
                     while (j < len(fullDNI) and errors < 2):
                         if (fullDNI[j] != csvData[i][11][j]):
                             errors += 1
                         j += 1
                     if (errors < 2):
-                        csvData[i][10] = 1
-                        exam.realDNI = csvData[i][11]
-                        exam.realName = csvData[i][1]
-                        exam.realSurname = csvData[i][2]
-                        exam.realCsvIndex = csvData[i][5]
-                        trobat = 1
+                        possibleCandidates.append(i)
                 i += 1
+            #Si nomes hi ha un possible candidat assignacio directa
+            if (len(possibleCandidates) == 1):
+                csvData[possibleCandidates[0]][10] = 1
+                exam.realDNI = csvData[possibleCandidates[0]][11]
+                exam.realName = csvData[possibleCandidates[0]][1]
+                exam.realSurname = csvData[possibleCandidates[0]][2]
+                exam.realCsvIndex = csvData[possibleCandidates[0]][5]
+            #Si hi ha mes dun possible candidat no sassigna -> filtrar mes endavant
+            elif (len(possibleCandidates) > 1):
+                examsWithMoreThanOneCandidate += 1
+                showExam(exam)
+                for candidate in possibleCandidates:
+                    print csvData[candidate]
+    print "Examens que tenen mes d'un candidat possible amb un error: ", examsWithMoreThanOneCandidate
     return exams, csvData
+
+def moreThanOneErrorAssignment (exams, csvData):
+    examsWith2Errors = 0
+    #Recorrem tots els examens
+    for exam in exams:
+        exam2errors = 0
+        if (exam.realCsvIndex == -1):
+            i = 0
+            candidats = 0
+            #Recorrem tot el llistat csv en busca dalumnes no assignats
+            while (i < len(csvData)):
+                if (csvData[i][10] == 0):
+                    j = 0
+                    numDNIString = ''.join(str(e) for e in exam.numberDNI)
+                    fullDNI = numDNIString + exam.letterDNI
+                    errors = 0
+                    #Busquem en el llistat tots els dnis que difereixen amb el dni predit en 2 unitats
+                    while (j < len(fullDNI) and errors < 4):
+                        if (fullDNI[j] != csvData[i][11][j]):
+                            errors += 1
+                        j += 1
+                    #Guardem el csvIndex de tots aquests candidats
+                    if (errors < 4):
+                        exam2errors = 1
+                        candidats += 1
+                        exam.possibleCsvIndex.append(csvData[i][5])
+                i += 1
+            print "El examen que te el DNI predit com ", fullDNI, " te 2 errors amb ", candidats, "candidats" 
+        if (exam2errors == 1): 
+            examsWith2Errors += 1
+            print "Possibles CvsIndex del examen:"
+            showExam(exam)
+            distanceFailureHistory = 9999
+            finalCandidate = 0
+            primer = 1
+            for candidate in exam.possibleCsvIndex:
+                print "CsvIndex: ", candidate
+                #Comencar a calcular distancies de fallada per veure quin es el millor candidat
+                distanceFailure = checkDistanceFailure(exam, csvData[candidate - 1] )
+                if (distanceFailure < distanceFailureHistory or primer):
+                    distanceFailureHistory = distanceFailure
+                    finalCandidate = candidate
+                    primer = 0
+            threshold = 2
+            #Si el candidat supera el threshold lassignem al llistat csv
+            if (distanceFailureHistory < threshold): #final candidate - 1 ja que el llistat sinicia al nombre 1 i es el cvsIndex
+                csvData[finalCandidate-1][10] = 1
+                exam.realDNI = csvData[finalCandidate-1][11]
+                exam.realName = csvData[finalCandidate-1][1]
+                exam.realSurname = csvData[finalCandidate-1][2]
+                exam.realCsvIndex = csvData[finalCandidate-1][5]
+                showExam(exam)
+    print "Examens amb dos errors al DNI :", examsWith2Errors
+    return exams, csvData
+
+def checkDistanceFailure(exam, candidate):
+    insertions_name = 0
+    deletions_name = 0
+    changes_name = 0
+    insertions_surname = 0
+    deletions_surname = 0
+    changes_surname = 0
+    examName = ''.join(str(e) for e in exam.name)
+    examSurname = ''.join(str(e) for e in exam.surname)
+    lenExamName = len(examName)
+    lenExamSurname = len(examSurname)
+    lenNameCandidate = len(candidate[3])
+    lenSurnameCandidate = len(candidate[4])
+    if (lenNameCandidate > lenExamName): 
+        insertions_name = lenNameCandidate - lenExamName
+        i = 0
+        while (i < lenExamName):
+            if (examName[i] != candidate[3][i]):
+                changes_name += 1
+            i += 1
+    else:
+        deletions_name = lenExamName - lenNameCandidate
+        i = 0
+        while (i < lenNameCandidate):
+            if (examName[i] != candidate[3][i]):
+                changes_name += 1
+            i += 1
+    if (lenSurnameCandidate > lenExamSurname): 
+        insertions_surname = lenSurnameCandidate - lenExamSurname
+        i = 0
+        while (i < lenExamSurname):
+            if (examSurname[i] != candidate[4][i]):
+                changes_surname += 1
+            i += 1
+    else:
+        deletions_surname = lenExamSurname - lenSurnameCandidate
+        i = 0
+        while (i < lenSurnameCandidate):
+            if (examSurname[i] != candidate[4][i]):
+                changes_surname += 1
+            i += 1
+    distanceName = 0.25*float(changes_name)+0.5*float(insertions_name)+1.0*float(deletions_name)
+    print "Canvis nom: ", changes_name
+    print "Insercions nom: ", insertions_name
+    print "Eliminacions nom: ", deletions_name
+
+    print "Distancia nom: ", distanceName
+    distanceSurname = 0.25*float(changes_surname)+0.5*float(insertions_surname)+1.0*float(deletions_surname)
+    print "Distancia cognom: ", distanceSurname
+    return distanceName
 
 def main():
 
@@ -324,6 +445,13 @@ def main():
         if (exam.realCsvIndex != -1):
             identifiedExams += 1
     print "EXAMENS IDENTIFICATS: ", identifiedExams
+    examsTwoErrors, namesTwoErrors = moreThanOneErrorAssignment(examsOneError, namesOneError)
+    identifiedExams = 0
+    for exam in examsTwoErrors:
+        showExam(exam)
+        if (exam.realCsvIndex != -1):
+            identifiedExams += 1
+    print "EXAMENS IDENTIFICATS AMB ELS TRES FILTRES: ", identifiedExams
     '''
     result,unused, unrecognizable = mapResults(results, names[0], images, errors)
     fin = {
