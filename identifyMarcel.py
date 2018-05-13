@@ -190,11 +190,11 @@ def oneErrorAssignment (exams, csvData):
                     fullDNI = numDNIString + exam.letterDNI
                     errors = 0
                     #Busquem en el llistat tots els dnis que difereixen amb el dni predit en 1 unitat
-                    while (j < len(fullDNI) and errors < 2):
+                    while (j < len(fullDNI)  and j < len(csvData[i][11]) and errors < 2):
                         if (fullDNI[j] != csvData[i][11][j]):
                             errors += 1
                         j += 1
-                    if (errors < 2):
+                    if (errors < 2 and j == len(fullDNI)):
                         possibleCandidates.append(i)
                 i += 1
             #Si nomes hi ha un possible candidat assignacio directa
@@ -229,12 +229,12 @@ def moreThanOneErrorAssignment (exams, csvData):
                     fullDNI = numDNIString + exam.letterDNI
                     errors = 0
                     #Busquem en el llistat tots els dnis que difereixen amb el dni predit en 2 unitats
-                    while (j < len(fullDNI) and errors < 4):
+                    while (j < len(fullDNI) and j < len (csvData[i][11]) and errors < 4):
                         if (fullDNI[j] != csvData[i][11][j]):
                             errors += 1
                         j += 1
                     #Guardem el csvIndex de tots aquests candidats
-                    if (errors < 4):
+                    if (errors < 4 and j == len(fullDNI)):
                         exam2errors = 1
                         candidats += 1
                         exam.possibleCsvIndex.append(csvData[i][5])
@@ -244,20 +244,23 @@ def moreThanOneErrorAssignment (exams, csvData):
             examsWith2Errors += 1
             print "Possibles CvsIndex del examen:"
             showExam(exam)
-            distanceFailureHistory = 9999
+            distanceFailureHistoryName = 9999
+            distanceFailureHistorySurname = 9999
             finalCandidate = 0
             primer = 1
             for candidate in exam.possibleCsvIndex:
                 print "CsvIndex: ", candidate
                 #Comencar a calcular distancies de fallada per veure quin es el millor candidat
-                distanceFailure = checkDistanceFailure(exam, csvData[candidate - 1] )
-                if (distanceFailure < distanceFailureHistory or primer):
-                    distanceFailureHistory = distanceFailure
+                distanceFailureName, distanceFailureSurname = checkDistanceFailure(exam, csvData[candidate - 1] )
+                if ((distanceFailureName <= distanceFailureHistoryName and distanceFailureSurname <= distanceFailureHistorySurname) or primer): #final candidate - 1 ja que el llistat sinicia al nombre 1 i es el cvsIndex
+                    distanceFailureHistoryName = distanceFailureName
+                    distanceFailureHistorySurname = distanceFailureSurname
                     finalCandidate = candidate
                     primer = 0
-            threshold = 2
+            thresholdName = 1
+            thresholdSurname = 2
             #Si el candidat supera el threshold lassignem al llistat csv
-            if (distanceFailureHistory < threshold): #final candidate - 1 ja que el llistat sinicia al nombre 1 i es el cvsIndex
+            if (distanceFailureHistoryName <= thresholdName and distanceFailureHistorySurname <= thresholdSurname): #final candidate - 1 ja que el llistat sinicia al nombre 1 i es el cvsIndex
                 csvData[finalCandidate-1][10] = 1
                 exam.realDNI = csvData[finalCandidate-1][11]
                 exam.realName = csvData[finalCandidate-1][1]
@@ -266,6 +269,171 @@ def moreThanOneErrorAssignment (exams, csvData):
                 showExam(exam)
     print "Examens amb dos errors al DNI :", examsWith2Errors
     return exams, csvData
+
+def lastFilterAssignment (exams, csvData):
+    examsWith2Errors = 0
+    #Recorrem tots els examens
+    for exam in exams:
+        exam2errors = 0
+        if (exam.realCsvIndex == -1):
+            i = 0
+            candidats = 0
+            #Recorrem tot el llistat csv en busca dalumnes no assignats
+            while (i < len(csvData)):
+                if (csvData[i][10] == 0):
+                    j = 0
+                    numDNIString = ''.join(str(e) for e in exam.numberDNI)
+                    fullDNI = numDNIString + exam.letterDNI
+                    errors = 0
+                    #print fullDNI
+                    #print csvData[i][11]
+                    #Busquem en el llistat tots els dnis que difereixen amb el dni predit en 5 unitats
+                    while (j < len(fullDNI) and j < len(csvData[i][11]) and errors < 6):
+                        if (fullDNI[j] != csvData[i][11][j]):
+                            errors += 1
+                        #print fullDNI[j]
+                        #print csvData[i][11][j]
+                        #print j
+                        j += 1
+                    #Guardem el csvIndex de tots aquests candidats
+                    if (errors < 6 and j == len(fullDNI)):
+                        exam2errors = 1
+                        candidats += 1
+                        exam.possibleCsvIndex.append(csvData[i][5])
+                i += 1
+            print "El examen que te el DNI predit com ", fullDNI, " te 2 errors amb ", candidats, "candidats" 
+        if (exam2errors == 1): 
+            examsWith2Errors += 1
+            print "Possibles CvsIndex del examen:"
+            showExam(exam)
+            distanceFailureHistoryName = 9999
+            distanceFailureHistorySurname = 9999
+            finalCandidate = 0
+            primer = 1
+            for candidate in exam.possibleCsvIndex:
+                print "CsvIndex: ", candidate
+                #Comencar a calcular distancies de fallada per veure quin es el millor candidat
+                distanceFailureName, distanceFailureSurname = checkDistanceFailure(exam, csvData[candidate - 1] )
+            if ((distanceFailureName <= distanceFailureHistoryName and distanceFailureSurname <= distanceFailureHistorySurname) or primer): #final candidate - 1 ja que el llistat sinicia al nombre 1 i es el cvsIndex
+                    distanceFailureHistoryName = distanceFailureName
+                    distanceFailureHistorySurname = distanceFailureSurname
+                    finalCandidate = candidate
+                    primer = 0
+            thresholdName = 1
+            thresholdSurname = 2
+            #Si el candidat supera el threshold lassignem al llistat csv
+            if (distanceFailureHistoryName <= thresholdName and distanceFailureHistorySurname <= thresholdSurname): #final candidate - 1 ja que el llistat sinicia al nombre 1 i es el cvsIndex
+                csvData[finalCandidate-1][10] = 1
+                exam.realDNI = csvData[finalCandidate-1][11]
+                exam.realName = csvData[finalCandidate-1][1]
+                exam.realSurname = csvData[finalCandidate-1][2]
+                exam.realCsvIndex = csvData[finalCandidate-1][5]
+                showExam(exam)
+    print "Examens amb dos errors al DNI :", examsWith2Errors
+    return exams, csvData
+
+def filterNoDNI (exams, csvData):
+    examsWith2Errors = 0
+    #Recorrem tots els examens
+    for exam in exams:
+        exam2errors = 0
+        if (exam.realCsvIndex == -1):
+            i = 0
+            candidats = 0
+            #Recorrem tot el llistat csv en busca dalumnes no assignats
+            while (i < len(csvData)):
+                if (csvData[i][10] == 0):
+                        exam.possibleCsvIndex.append(csvData[i][5])
+                i += 1
+            print "El examen que te el DNI predit com ", fullDNI, " te 2 errors amb ", candidats, "candidats" 
+            distanceFailureHistoryName = 9999
+            distanceFailureHistorySurname = 9999
+            finalCandidate = 0
+            primer = 1
+            for candidate in exam.possibleCsvIndex:
+                print "CsvIndex: ", candidate
+                #Comencar a calcular distancies de fallada per veure quin es el millor candidat
+                distanceFailureName, distanceFailureSurname = checkDistanceFailure(exam, csvData[candidate - 1] )
+                if ((distanceFailureName < distanceFailureHistoryName and distanceFailureSurname < distanceFailureHistorySurname) or primer):
+                    distanceFailureHistoryName = distanceFailureName
+                    distanceFailureHistorySurname = distanceFailureSurname
+                    finalCandidate = candidate
+                    primer = 0
+            thresholdName = 0.5
+            thresholdSurname = 1
+            #Si el candidat supera el threshold lassignem al llistat csv
+            if (distanceFailureHistoryName <= thresholdName and distanceFailureHistorySurname <= thresholdSurname): #final candidate - 1 ja que el llistat sinicia al nombre 1 i es el cvsIndex
+                csvData[finalCandidate-1][10] = 1
+                exam.realDNI = csvData[finalCandidate-1][11]
+                exam.realName = csvData[finalCandidate-1][1]
+                exam.realSurname = csvData[finalCandidate-1][2]
+                exam.realCsvIndex = csvData[finalCandidate-1][5]
+                showExam(exam)
+    print "Examens amb dos errors al DNI :", examsWith2Errors
+    return exams, csvData
+
+
+def betaFilterAssignment (exams, csvData, allowedErrors, thresholdName, thresholdSurname):
+    examsWith2Errors = 0
+    #Recorrem tots els examens
+    for exam in exams:
+        exam2errors = 0
+        if (exam.realCsvIndex == -1):
+            i = 0
+            candidats = 0
+            #Recorrem tot el llistat csv en busca dalumnes no assignats
+            while (i < len(csvData)):
+                if (csvData[i][10] == 0):
+                    j = 0
+                    numDNIString = ''.join(str(e) for e in exam.numberDNI)
+                    fullDNI = numDNIString + exam.letterDNI
+                    errors = 0
+                    print fullDNI
+                    print csvData[i][11]
+                    #Busquem en el llistat tots els dnis que difereixen amb el dni predit en 5 unitats
+                    while (j < len(fullDNI) and j < len(csvData[i][11]) and errors <= allowedErrors):
+                        if (fullDNI[j] != csvData[i][11][j]):
+                            errors += 1
+                        #print fullDNI[j]
+                        #print csvData[i][11][j]
+                        #print j
+                        j += 1
+                    #Guardem el csvIndex de tots aquests candidats
+                    if (errors <= allowedErrors and j == len(fullDNI)):
+                        exam2errors = 1
+                        candidats += 1
+                        exam.possibleCsvIndex.append(csvData[i][5])
+                i += 1
+            print "El examen que te el DNI predit com ", fullDNI, " te 2 errors amb ", candidats, "candidats" 
+        if (exam2errors == 1): 
+            examsWith2Errors += 1
+            print "Possibles CvsIndex del examen:"
+            showExam(exam)
+            distanceFailureHistoryName = 9999
+            distanceFailureHistorySurname = 9999
+            finalCandidate = 0
+            primer = 1
+            for candidate in exam.possibleCsvIndex:
+                print "CsvIndex: ", candidate
+                #Comencar a calcular distancies de fallada per veure quin es el millor candidat
+                distanceFailureName, distanceFailureSurname = checkDistanceFailure(exam, csvData[candidate - 1] )
+                if ((distanceFailureName <= distanceFailureHistoryName and distanceFailureSurname <= distanceFailureHistorySurname) or primer): #final candidate - 1 ja que el llistat sinicia al nombre 1 i es el cvsIndex
+                    distanceFailureHistoryName = distanceFailureName
+                    distanceFailureHistorySurname = distanceFailureSurname
+                    finalCandidate = candidate
+                    primer = 0
+            #Si el candidat supera el threshold lassignem al llistat csv
+            if (distanceFailureHistoryName <= thresholdName and distanceFailureHistorySurname <= thresholdSurname): #final candidate - 1 ja que el llistat sinicia al nombre 1 i es el cvsIndex
+                csvData[finalCandidate-1][10] = 1
+                exam.realDNI = csvData[finalCandidate-1][11]
+                exam.realName = csvData[finalCandidate-1][1]
+                exam.realSurname = csvData[finalCandidate-1][2]
+                exam.realCsvIndex = csvData[finalCandidate-1][5]
+                showExam(exam)
+    print "Examens amb dos errors al DNI :", examsWith2Errors
+    return exams, csvData
+
+
 
 def checkDistanceFailure(exam, candidate):
     insertions_name = 0
@@ -316,7 +484,19 @@ def checkDistanceFailure(exam, candidate):
     print "Distancia nom: ", distanceName
     distanceSurname = 0.25*float(changes_surname)+0.5*float(insertions_surname)+1.0*float(deletions_surname)
     print "Distancia cognom: ", distanceSurname
-    return distanceName
+    return distanceName, distanceSurname
+
+
+
+def countIdentifiedExams(exams, errors, verbose):
+    identifiedExams = 0
+    for exam in exams:
+        if (verbose == 1):
+            showExam(exam)
+        if (exam.realCsvIndex != -1):
+            identifiedExams += 1
+    print "EXAMENS IDENTIFICATS EN LA TANDA AMB ", errors, ": ", identifiedExams
+
 
 def main():
 
@@ -438,20 +618,75 @@ def main():
 
     #Inici de assignacions
     examsBasic, namesBasic = basicAssignment(exams,names[0])
-    examsOneError, namesOneError = oneErrorAssignment(examsBasic,namesBasic)
+    examsOneErrors, namesOneErrors = oneErrorAssignment(examsBasic,namesBasic)
     identifiedExams = 0
-    for exam in examsOneError:
+    for exam in examsOneErrors:
         showExam(exam)
         if (exam.realCsvIndex != -1):
             identifiedExams += 1
     print "EXAMENS IDENTIFICATS: ", identifiedExams
+
+
+
+    '''
     examsTwoErrors, namesTwoErrors = moreThanOneErrorAssignment(examsOneError, namesOneError)
     identifiedExams = 0
+    unknownExams = []
     for exam in examsTwoErrors:
         showExam(exam)
         if (exam.realCsvIndex != -1):
             identifiedExams += 1
+        else:
+            unknownExams.append(exam)
     print "EXAMENS IDENTIFICATS AMB ELS TRES FILTRES: ", identifiedExams
+    print "EXAMENS NO IDENTIFICATS!!!!!!!!!!!!!!!!"
+    for exam in unknownExams:
+        showExam(exam)
+    examsLastFilter, namesLastFilter = lastFilterAssignment(examsTwoErrors, namesTwoErrors)
+    identifiedExams = 0
+    unknownExams = []
+    for exam in examsLastFilter:
+        showExam(exam)
+        if (exam.realCsvIndex != -1):
+            identifiedExams += 1
+        else:
+            unknownExams.append(exam)
+    print "EXAMENS IDENTIFICATS AMB ELS TRES FILTRES: ", identifiedExams
+    print "EXAMENS NO IDENTIFICATS!!!!!!!!!!!!!!!!"
+    for exam in unknownExams:
+        showExam(exam)
+    '''
+    examsTwoErrors, namesTwoErrors = betaFilterAssignment(examsOneErrors, namesOneErrors, 2, 1, 2)
+    countIdentifiedExams(examsTwoErrors, 2, 0)
+    examsThreeErrors, namesThreeErrors = betaFilterAssignment(examsTwoErrors, namesTwoErrors, 3, 1, 2)
+    countIdentifiedExams(examsThreeErrors, 3, 0)
+    examsFourErrors, namesFourErrors = betaFilterAssignment(examsThreeErrors, namesThreeErrors, 4, 1, 2)
+    countIdentifiedExams(examsFourErrors, 4, 0)
+    examsFiveErrors, namesFiveErrors = betaFilterAssignment(examsFourErrors, namesFourErrors, 5, 1, 2)
+    countIdentifiedExams(examsFiveErrors, 5, 0)
+    examsSixErrors, namesSixErrors = betaFilterAssignment(examsFiveErrors, namesFiveErrors, 6, 1, 3)
+    countIdentifiedExams(examsSixErrors, 6, 0)
+    examsSevenErrors, namesSevenErrors = betaFilterAssignment(examsSixErrors, namesSixErrors, 7, 1, 3)
+    countIdentifiedExams(examsSevenErrors, 7, 0)
+    examsEightErrors, namesEightErrors = betaFilterAssignment(examsSevenErrors, namesSevenErrors, 8, 1, 3)
+    countIdentifiedExams(examsEightErrors, 8, 0)
+    examsNineErrors, namesNineErrors = betaFilterAssignment(examsEightErrors, namesEightErrors, 9, 1, 3)
+    countIdentifiedExams(examsNineErrors, 9, 1)
+    identifiedExams = 0
+    unknownExams = []
+    for exam in examsNineErrors:
+        if (exam.realCsvIndex == -1):
+            showExam(exam)
+    '''
+    examsTwoErrors, namesTwoErrors = betaFilterAssignment(examsOneError, namesOneError, 3, 1, 2)
+    examsLastFilter, namesLastFilter = betaFilterAssignment(examsTwoErrors, namesTwoErrors, 5, 1 ,2)
+    identifiedExams = 0
+    for exam in exams:
+        showExam(exam)
+        if (exam.realCsvIndex != -1):
+            identifiedExams += 1
+    print "EXAMENS IDENTIFICATS: ", identifiedExams
+    '''
     '''
     result,unused, unrecognizable = mapResults(results, names[0], images, errors)
     fin = {
@@ -1241,7 +1476,7 @@ def processFile(filename, data ,possibleWords, models):
             #aux2 = cv2.resize(aux59x59, (64, 64), cv2.INTER_LINEAR)
             aux2 = cv2.resize(aux59x59, (28, 28), cv2.INTER_LINEAR)
             #cv2.imshow("Number DNI Corecction Color", aux2)
-            #cv2.waitKey(1000)
+            #cv2.waitKey(2000)
             #cv2.destroyAllWindows()
 
 
@@ -1379,6 +1614,10 @@ def processFile(filename, data ,possibleWords, models):
             #Resize image
             #aux2 = cv2.resize(aux59x59, (64, 64), cv2.INTER_LINEAR)
             aux2 = cv2.resize(aux59x59, (28, 28), cv2.INTER_LINEAR)
+            #cv2.imshow("Number DNI Corecction Color", aux2)
+            #cv2.waitKey(3000)
+            #cv2.destroyAllWindows()
+
 
             if (not isEmpty(aux2)):
                 #print aux.shape[0]
